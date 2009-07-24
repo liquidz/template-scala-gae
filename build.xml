@@ -1,0 +1,126 @@
+<project name="template-scala-gae" default="build" basedir=".">
+  <description>sample build file</description>
+
+  <property
+    name="base.dir"
+    value="${basedir}"
+     />
+  <property
+    name="sources.dir"
+    value="${base.dir}/sources"
+     />
+  <property
+    name="build.dir"
+    value="${base.dir}/WEB-INF/classes"
+    />
+  <property environment="env"/>
+  <property
+    name="scala.home"
+    value="${env.SCALA_HOME}"
+    />
+  <property
+    name="sdk.home"
+    value="${env.GAE_HOME}"
+    />
+  <import file="${sdk.home}/config/user/ant-macros.xml" />
+  <property
+    name="servlet-library.jar"
+    value="${sdk.home}/lib/shared/geronimo-servlet_2.5_spec-1.2.jar"
+     />
+  <property
+    name="jdo-library.jar"
+    value="${sdk.home}/lib/user/orm/jdo2-api-2.3-ea.jar"
+     />
+  <property
+    name="scala-library.jar"
+    value="${scala.home}/lib/scala-library.jar"
+    />
+  <property
+    name="appengine-api.jar"
+    value="${sdk.home}/lib/user/appengine-api-1.0-sdk-1.2.2.jar"
+    />
+  <path id="build.classpath">
+    <pathelement location="${servlet-library.jar}" />
+    <pathelement location="${jdo-library.jar}" />
+    <pathelement location="${scala-library.jar}" />
+    <pathelement location="${appengine-api.jar}" />
+    <pathelement location="${build.dir}" />
+  </path>
+  <taskdef resource="scala/tools/ant/antlib.xml">
+    <classpath>
+      <pathelement location="${scala.home}/lib/scala-compiler.jar"   />
+      <pathelement location="${scala-library.jar}"   />
+    </classpath>
+  </taskdef>
+
+  <target name="clean" description="Delete complied classes">
+  	<delete>
+	  <fileset dir="${build.dir}">
+	  	<include name="**/*.class" />
+	  </fileset>
+	</delete>
+  </target>
+
+  <target name="copyscala"
+    description="Copies the App Engine JARs to the WAR.">
+    <copy todir="WEB-INF/lib" flatten="true">
+      <fileset dir="${scala.home}/lib">
+          <include name="**/scala-library.jar" />
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="copyjars" description="Copies the Scala JARs to the WAR.">
+    <copy todir="WEB-INF/lib" flatten="true">
+      <fileset dir="${sdk.home}/lib/user">
+        <include name="**/*.jar" />
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="build" depends="copyjars,copyscala">
+    <mkdir dir="${build.dir}"   />
+    <scalac srcdir="${sources.dir}"
+            destdir="${build.dir}"
+            classpathref="build.classpath"
+            force="changed">
+      <include name="**/*.scala" />
+    </scalac>    
+  </target>
+  
+  <target name="datanucleusenhance" depends="build"
+        description="Performs JDO enhancement on compiled data classes.">
+      <enhance_war war="${base.dir}" />
+    </target>
+    
+  <target name="runserver" depends="datanucleusenhance" description="Starts the development server.">
+    <dev_appserver war="${base.dir}" />
+  </target>
+  
+  <target name="update" depends="datanucleusenhance"
+      description="Uploads the application to App Engine.">
+    <appcfg action="update" war="${base.dir}" />
+  </target>
+
+  <target name="update_indexes" depends="datanucleusenhance"
+      description="Uploads just the datastore index configuration to App Engine.">
+    <appcfg action="update_indexes" war="${base.dir}" />
+  </target>
+
+  <target name="rollback" depends="datanucleusenhance"
+      description="Rolls back an interrupted application update.">
+    <appcfg action="rollback" war="${base.dir}" />
+  </target>
+
+  <target name="request_logs"
+      description="Downloads log data from App Engine for the application.">
+    <appcfg action="request_logs" war="${base.dir}">
+      <options>
+        <arg value="--num_days=5"/>
+      </options>
+      <args>
+        <arg value="logs.txt"/>
+      </args>
+    </appcfg>
+  </target>
+</project>
