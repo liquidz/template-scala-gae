@@ -5,51 +5,63 @@ import scala.xml._
 
 import com.util.{Auth, PMF}
 import com.view._
-import com.model.Thing
+import com.model.Person
 
 class StartServlet extends HttpServlet {
-	override def doGet(request:HttpServletRequest, response:HttpServletResponse):Unit = {
+	var _req:HttpServletRequest = null
+	var _resp:HttpServletResponse = null
 
+	override def doGet(request:HttpServletRequest, response:HttpServletResponse):Unit = {
 		if(Auth.isNotLogined){
 			response.sendRedirect(Auth.loginURL(request))
 			return
 		}
 
+		_req = request
+		_resp = response
+
+		request.getPathInfo match {
+			case "/new" => newPerson
+			case _ => main
+		}
+	}
+
+	// =main
+	// -------------------------------
+	private def main():Unit = {
 		var count = 0
 		var people:Node = <div class="people"></div>
 
-		if(request.getPathInfo == "/new"){
-			PMF.withManager(pm => {
-				val t = new Thing(request.getParameter( "firstName"), request.getParameter( "lastName"))
-				pm.makePersistent(t)
-			})
-			response.sendRedirect("/")
-		}   
-
-		PMF.withManager(pm => {
-			val extent:Extent[Thing] = pm.getExtent(classOf[Thing], false)
-			val i = extent.iterator
-			while(i.hasNext) {
-				count += 1
-				val person = i.next
-				people = add(people, <div class="person">{person.firstName} {person.lastName}</div>)
-			}
-			extent.closeAll()
+		PMF.foreach(classOf[Person])(p => {
+			count += 1
+			people = add(people, <div class="person">{p.firstName} {p.lastName}</div>)
 		})
 
-		response.getWriter().println(
+		_resp.getWriter().println(
 			MainPage.html(Map(
 				'nickname -> Auth.user.getNickname,
-				'method -> request.getMethod,
-				'path -> request.getPathInfo,
+				'method -> _req.getMethod,
+				'path -> _req.getPathInfo,
 				'count -> count,
 				'people -> people,
-				'logout -> Auth.logoutURL(request)
+				'logout -> Auth.logoutURL(_req)
 				)
 			)
 		)
 	}
 
+	// =newPerson
+	// -------------------------------
+	private def newPerson():Unit = {
+		PMF.withManager(pm => {
+			val p = new Person(_req.getParameter( "firstName"), _req.getParameter( "lastName"))
+			pm.makePersistent(p)
+		})
+		_resp.sendRedirect("/")
+	}
+
+	// =add
+	// -------------------------------
 	private def add(p:Node, newEntry:Node):Node = p match {
 		case <div>{ ch @ _* }</div> => <div>{ ch }{ newEntry }</div>
 	}
