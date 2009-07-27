@@ -14,15 +14,14 @@ class StartServlet extends HttpServlet {
 	override def doGet(request:HttpServletRequest, response:HttpServletResponse):Unit = {
 		if(Auth.isNotLogined){
 			response.sendRedirect(Auth.loginURL(request))
-			return
-		}
+		} else {
+			_req = request
+			_resp = response
 
-		_req = request
-		_resp = response
-
-		request.getPathInfo match {
-			case "/new" => newPerson
-			case _ => main
+			request.getPathInfo match {
+				case "/new" => newPerson
+				case _ => main
+			}
 		}
 	}
 
@@ -37,17 +36,14 @@ class StartServlet extends HttpServlet {
 			people = add(people, <div class="person">{p.firstName} {p.lastName}</div>)
 		})
 
-		_resp.getWriter().println(
-			MainPage.html(Map(
-				'nickname -> Auth.user.getNickname,
-				'method -> _req.getMethod,
-				'path -> _req.getPathInfo,
-				'count -> count,
-				'people -> people,
-				'logout -> Auth.logoutURL(_req)
-				)
-			)
-		)
+		MainPage.nickname = Auth.user.getNickname
+		MainPage.method = _req.getMethod
+		MainPage.path = _req.getPathInfo
+		MainPage.count = count
+		MainPage.people = people
+		MainPage.logout = Auth.logoutURL(_req)
+
+		_resp.getWriter().println(MainPage.html)
 	}
 
 	// =newPerson

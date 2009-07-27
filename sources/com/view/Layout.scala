@@ -2,12 +2,19 @@ package com.view
 
 import scala.xml._
 
-object Layout {
-	def html[A](body:A):Node =
-<html>
-<head>
-	<title>Hello, world2</title>
-</head>
-<body>{body}</body>
-</html>
+trait ViewTemplate {
+	var title = "template"
+	def head = <head>{title}</head>
+	def body = <body></body>
+	def html = <html>{head}{body}</html>
+}
+
+class Layout extends AnyRef with ViewTemplate {
+	title = "hello, world"
+	def container:Any = null
+
+	override def body =
+<body>
+	<div id="container">{container}</div>
+</body>
 }

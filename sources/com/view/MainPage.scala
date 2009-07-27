@@ -2,7 +2,11 @@ package com.view
 
 import scala.xml._
 
-object MainPage {
+object MainPage extends Layout {
+	var (nickname, method, path, logout) = ("", "", "", "")
+	var count = 0
+	var people:Node = null
+
 	val postForm = <form method="get" action="/new">
 <label for="firstName">First Name</label>
 <input type="text" name="firstName" />
@@ -11,16 +15,11 @@ object MainPage {
 <input type="submit" name="" />
 </form>
 
-	def html[A](x:Map[Symbol,A]):Node = {
-		Layout.html(
-<div id="container">
-<h1>Hello {x apply'nickname} with method {x apply'method}</h1>
-<p>path was {x apply'path}</p>
-<p>{x apply'count} names were found:</p>
-<div>{x apply'people}</div>
-<a href={(x apply'logout).toString}>logout</a>
-{postForm}
-</div>
-		)
-	}
+	override def container:Any = 
+<h1>Hello, {nickname} with method {method}</h1>
+<p>path was {path}</p>
+<p>{count} names were found:</p>
+<div>{people}</div>
+<a href={logout}>logout</a>
+<div>{postForm}</div>
 }
