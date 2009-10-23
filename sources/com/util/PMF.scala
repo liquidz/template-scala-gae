@@ -3,11 +3,11 @@ package com.util
 import javax.jdo.{Extent, JDOHelper, PersistenceManager, PersistenceManagerFactory}
 
 object PMF {
-	var pmfInstance:PersistenceManagerFactory =
+	val pmfInstance:PersistenceManagerFactory =
 		JDOHelper.getPersistenceManagerFactory("transactions-optional")
 
 	def withManager(f:PersistenceManager => Unit):Unit = {
-		var pm = pmfInstance.getPersistenceManager
+		val pm = pmfInstance.getPersistenceManager
 		try {
 			f(pm)
 		} finally {
@@ -24,5 +24,13 @@ object PMF {
 		val i = extent.iterator
 		while(i.hasNext) f(i.next)
 		extent.closeAll
+	}
+
+	def deleteIf[A](k:Class[A])(f:A => Boolean):Unit = {
+		withManager(pm => {
+			foreach(pm, k)(item => {
+				if(f(item)) pm.deletePersistent(item)
+			})
+		})
 	}
 }
