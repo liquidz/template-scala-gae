@@ -9,5 +9,5 @@ class Person(@Persistent var firstName:String, @Persistent var lastName :String)
 	@Persistent {val valueStrategy = IdGeneratorStrategy.IDENTITY}
 	var id: java.lang.Long = null 
 
-	override def toString():String = "[Person: " + firstName + " " + lastName + "]"
+	override def toString():String = "[Person: " + id + ", " + firstName + " " + lastName + "]"
 }

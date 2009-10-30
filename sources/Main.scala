@@ -3,11 +3,10 @@ import javax.jdo.annotations._
 import javax.servlet.http._
 import scala.xml._
 
-import com.util.{Auth, PMF}
-import com.model.Person
-
 import com.thinkminimo.step._
-import com.uo.liquidz.SimpleView._
+
+import com.util._
+import com.util.ExtendedEntity._
 
 object template {
 	def layout(title:String, content:Elem) = <html>
@@ -29,44 +28,74 @@ class StartServlet extends Step {
 	}
 
 	post("/post"){
-		val p = new Person(params("firstName"), params("lastName"))
-		PMF.withManager(pm => {
-			pm.makePersistent(p)
-		})
-		template.layout("ok", <h2>{p.toString}</h2>);
+		val e = new ExtendedEntity("Person")
+		e.set("firstName", params("firstName")).set("lastName", params("lastName")).store
+
+		template.layout("ok", <h2>{e}</h2>)
 	}
 
 	get("/list"){
-		/*
-		var people:Node = <ul></ul>
-		PMF.foreach(classOf[Person])(p => {
-			people = add(people, <li>{p.toString}</li>)
+		var res:Node = <ul></ul>
+		ExtendedEntity.select("Person").foreach(me => {
+			res = add(res, <li>{me.getId}: {me("firstName")}, {me("lastName")}</li>)
 		})
-		template.layout("list", <div>{people}</div>)
-		*/
 
-		import java.util.List
-		var people:java.util.List[Person] = null
+		template.layout("list", <div>{res}</div>)
+	}
+
+	get("/get/:id"){
+		val e = ExtendedEntity.get("Person", params(":id").toLong)
+		if(e != null) template.layout("get", <div>{e}</div>)
+		else template.layout("get", <p>not found</p>)
+	}
+
+	get("/select/:str"){
 		var res:Node = <div></div>
-		PMF.withManager(pm => {
-			val query = "select from " + classOf[Person].getName
-			people = pm.newQuery(query).execute.asInstanceOf[java.util.List[Person]]
-			val ite = people.iterator
-			while(ite.hasNext) res = add(res, <div>{(ite.next.asInstanceOf[Person]).toString}</div>)
+
+		ExtendedEntity.select("Person", List("firstName == ?", params(":str"))).foreach(e => {
+			res = add(res, <p>{e("firstName")}, {e("lastName")}</p>)
 		})
-		template.layout("list", <h2>{ res }</h2>)
+
+		template.layout("select", <div>{res}</div>)
+
+
+	}
+
+	get("/select2/:str/:str2") {
+		var res:Node = <div></div>
+
+		ExtendedEntity.select("Person", List("firstName == ? and lastName == ?", params(":str"), params(":str2"))).foreach(e => {
+			res = add(res, <p>{e("firstName")}, {e("lastName")}</p>)
+		})
+
+		template.layout("select2", <div>{res}</div>)
+	}
+
+	get("/edit/:id"){
+		val en = ExtendedEntity.get("Person", params(":id").toLong)
+		if(en != null){
+			template.layout("edit", <form method="POST" action="/edit">
+				<input type="hidden" name="id" value={params(":id")} />
+				<p><input type="text" name="firstName" value={en("firstName").toString} /></p>
+				<p><input type="text" name="lastName" value={en("lastName").toString} /></p>
+				<p><input type="submit" value="update" /></p>
+			</form>)
+		} else {
+			template.layout("edit", <h2>not found</h2>)
+		}
+	}
+	post("/edit"){
+		val id = params("id")
+		if(id != null){
+			val en = ExtendedEntity.get("Person", id.toLong)
+			en.set("firstName", params("firstName")).set("lastName", params("lastName")).store
+		}
+
+		template.layout("edit", <h2>updated</h2>)
 	}
 
 	get("/del/:str"){
-		var target:String = ""
-		PMF.deleteIf(classOf[Person])(p => {
-			if(p.firstName == params(":str")){
-				target = p.toString
-				true
-			} else {
-				false
-			}
-		})
+		val target = ExtendedEntity.deleteIf("Person", List("firstName == ?", params(":str"))).toString
 
 		if(target != ""){
 			template.layout("delete", <h2>done: { target }</h2>)
@@ -75,78 +104,9 @@ class StartServlet extends Step {
 		}
 	}
 
-	get("/date/:year/:month/:day"){
-		<html><head><title>aaa</title></head>
-			<body>
-				<h1>date</h1>
-				<p>{params(":year")} / {params(":month")} / {params(":day")}</p>
-			</body>
-		</html>
-	}
-
 	private def add(p:Node, newEntry:Node):Node = p match {
 		case <div>{ ch @ _* }</div> => <div>{ ch }{ newEntry }</div>
 		case <ul>{ ch @ _* }</ul> => <ul>{ ch }{ newEntry }</ul>
 	}
-
 }
 
-/*
-import com.view._
-
-class StartServlet extends HttpServlet {
-	var _req:HttpServletRequest = null
-	var _resp:HttpServletResponse = null
-
-	override def doGet(request:HttpServletRequest, response:HttpServletResponse):Unit = {
-		if(Auth.isNotLogined){
-			response.sendRedirect(Auth.loginURL(request))
-		} else {
-			_req = request
-			_resp = response
-
-			request.getPathInfo match {
-				case "/new" => newPerson
-				case _ => main
-			}
-		}
-	}
-
-	// =main
-	// -------------------------------
-	private def main():Unit = {
-		var count = 0
-		var people:Node = <div class="people"></div>
-
-		PMF.foreach(classOf[Person])(p => {
-			count += 1
-			people = add(people, <div class="person">{p.firstName} {p.lastName}</div>)
-		})
-
-		MainPage.nickname = Auth.user.getNickname
-		MainPage.method = _req.getMethod
-		MainPage.path = _req.getPathInfo
-		MainPage.count = count
-		MainPage.people = people
-		MainPage.logout = Auth.logoutURL(_req)
-
-		_resp.getWriter().println(MainPage.html)
-	}
-
-	// =newPerson
-	// -------------------------------
-	private def newPerson():Unit = {
-		PMF.withManager(pm => {
-			val p = new Person(_req.getParameter( "firstName"), _req.getParameter( "lastName"))
-			pm.makePersistent(p)
-		})
-		_resp.sendRedirect("/")
-	}
-
-	// =add
-	// -------------------------------
-	private def add(p:Node, newEntry:Node):Node = p match {
-		case <div>{ ch @ _* }</div> => <div>{ ch }{ newEntry }</div>
-	}
-}
-*/
