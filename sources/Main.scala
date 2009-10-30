@@ -9,7 +9,7 @@ import com.util._
 import com.util.ExtendedEntity._
 
 object template {
-	def layout(title:String, content:Elem) = <html>
+	def layout(title:String, content:Node) = <html>
 		<head><title>{ title }</title></head>
 		<body>
 			<h1>{ title}</h1>
@@ -40,7 +40,7 @@ class StartServlet extends Step {
 			res = add(res, <li>{me.getId}: {me("firstName")}, {me("lastName")}</li>)
 		})
 
-		template.layout("list", <div>{res}</div>)
+		template.layout("list", res)
 	}
 
 	get("/get/:id"){
@@ -56,7 +56,7 @@ class StartServlet extends Step {
 			res = add(res, <p>{e("firstName")}, {e("lastName")}</p>)
 		})
 
-		template.layout("select", <div>{res}</div>)
+		template.layout("select", res)
 
 
 	}
@@ -68,7 +68,7 @@ class StartServlet extends Step {
 			res = add(res, <p>{e("firstName")}, {e("lastName")}</p>)
 		})
 
-		template.layout("select2", <div>{res}</div>)
+		template.layout("select2", res)
 	}
 
 	get("/edit/:id"){
