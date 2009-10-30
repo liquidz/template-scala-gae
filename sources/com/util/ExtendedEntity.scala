@@ -11,9 +11,9 @@ object ExtendedEntity {
 	} catch {
 		case e:Exception => null
 	}
-
 	def get(kind:String, id:Long):ExtendedEntity = this.get(KeyFactory.createKey(kind, id))
 
+	// =select
 	def select(kind:String):List[ExtendedEntity] = select(kind, null)
 	def select(kind:String, filter:List[String]):List[ExtendedEntity] = {
 		val query = new Query(kind)
@@ -29,6 +29,7 @@ object ExtendedEntity {
 		javaIterator2scalaList(ds.prepare(query).asIterator).map(e => new ExtendedEntity(e))
 	}
 
+	// =deleteIf
 	def deleteIf(kind:String, filter:List[String]):List[Long] = {
 		var ids = List[Long]()
 		this.select(kind, filter).foreach(e => {
@@ -38,7 +39,8 @@ object ExtendedEntity {
 		ids.reverse
 	}
 
-	def javaIterator2scalaList[A](ite:java.util.Iterator[A]):List[A] = {
+	// =javaIterator2scalaList
+	private def javaIterator2scalaList[A](ite:java.util.Iterator[A]):List[A] = {
 		var ls = List[A]()
 		while(ite.hasNext){
 			ls = ite.next :: ls
@@ -46,6 +48,7 @@ object ExtendedEntity {
 		ls.reverse
 	}
 
+	// =parseFilter
 	private def parseFilter(str:String):List[String] = {
 		"""(.+?)(==|[><]=?)(.+?)""".r.unapplySeq(str) match {
 			case Some(List(prop, cond, value)) => {
@@ -55,6 +58,7 @@ object ExtendedEntity {
 		}
 	}
 	
+	// =parseConditions
 	private def parseConditions(str:String):List[String] = {
 		"""(.+?)and(.+?)""".r.unapplySeq(str) match {
 			case Some(List(c1, c2)) => {
@@ -64,6 +68,7 @@ object ExtendedEntity {
 		}
 	}
 
+	// =insertParams
 	private def insertParams(ls:List[Any]):List[String] = {
 		if(ls.length > 1){
 			var base = ls(0).asInstanceOf[String]
@@ -76,6 +81,7 @@ object ExtendedEntity {
 		} else List()
 	}
 
+	// =string2filterOperator
 	private def string2filterOperator(s:String):Query.FilterOperator = s match {
 		case "==" => Query.FilterOperator.EQUAL
 		case ">" => Query.FilterOperator.GREATER_THAN
@@ -85,6 +91,7 @@ object ExtendedEntity {
 		case _ => null
 	}
 
+	// =string2object
 	private def string2object(s:String):Object = {
 		"""^[0-9]+$""".r.findFirstIn(s) match {
 			case Some(x) => new Integer(Integer.parseInt(x))
@@ -109,6 +116,7 @@ class ExtendedEntity(val en:Entity){
 		this
 	}
 
+	// =set
 	def set(key:String, value:Any) = apply(key, value)
 
 	// =-=
